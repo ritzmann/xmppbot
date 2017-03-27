@@ -9,10 +9,10 @@
     See the file LICENSE for copying permission.
 """
 
-import sys
 import logging
 import getpass
 from optparse import OptionParser
+import sys
 
 import sleekxmpp
 
@@ -21,21 +21,25 @@ import sleekxmpp
 # throughout SleekXMPP, we will set the default encoding
 # ourselves to UTF-8.
 if sys.version_info < (3, 0):
-    reload(sys)
-    sys.setdefaultencoding('utf8')
+    from sleekxmpp.util.misc_ops import setdefaultencoding
+    setdefaultencoding('utf8')
 else:
     raw_input = input
 
 
-class EchoBot(sleekxmpp.ClientXMPP):
+class MUCBot(sleekxmpp.ClientXMPP):
 
     """
-    A simple SleekXMPP bot that will echo messages it
-    receives, along with a short thank you message.
+    A simple SleekXMPP bot that will greets those
+    who enter the room, and acknowledge any messages
+    that mentions the bot's nickname.
     """
 
-    def __init__(self, jid, password):
+    def __init__(self, jid, password, room, nick):
         sleekxmpp.ClientXMPP.__init__(self, jid, password)
+
+        self.room = room
+        self.nick = nick
 
         # The session_start event will be triggered when
         # the bot establishes its connection with the server
@@ -44,10 +48,20 @@ class EchoBot(sleekxmpp.ClientXMPP):
         # our roster.
         self.add_event_handler("session_start", self.start)
 
-        # The message event is triggered whenever a message
-        # stanza is received. Be aware that that includes
-        # MUC messages and error messages.
-        self.add_event_handler("message", self.message)
+        # The groupchat_message event is triggered whenever a message
+        # stanza is received from any chat room. If you also also
+        # register a handler for the 'message' event, MUC messages
+        # will be processed by both handlers.
+        self.add_event_handler("groupchat_message", self.muc_message)
+
+        # The groupchat_presence event is triggered whenever a
+        # presence stanza is received from any chat room, including
+        # any presences you send yourself. To limit event handling
+        # to a single room, use the events muc::room@server::presence,
+        # muc::room@server::got_online, or muc::room@server::got_offline.
+        self.add_event_handler("muc::%s::got_online" % self.room,
+                               self.muc_online)
+
 
     def start(self, event):
         """
@@ -62,23 +76,60 @@ class EchoBot(sleekxmpp.ClientXMPP):
                      event does not provide any additional
                      data.
         """
-        self.send_presence()
         self.get_roster()
+        self.send_presence()
+        self.plugin['xep_0045'].joinMUC(self.room,
+                                        self.nick,
+                                        # If a room password is needed, use:
+                                        # password=the_room_password,
+                                        wait=True)
 
-    def message(self, msg):
+    def muc_message(self, msg):
         """
-        Process incoming message stanzas. Be aware that this also
-        includes MUC messages and error messages. It is usually
-        a good idea to check the messages's type before processing
-        or sending replies.
+        Process incoming message stanzas from any chat room. Be aware
+        that if you also have any handlers for the 'message' event,
+        message stanzas may be processed by both handlers, so check
+        the 'type' attribute when using a 'message' event handler.
+
+        Whenever the bot's nickname is mentioned, respond to
+        the message.
+
+        IMPORTANT: Always check that a message is not from yourself,
+                   otherwise you will create an infinite loop responding
+                   to your own messages.
+
+        This handler will reply to messages that mention
+        the bot's nickname.
 
         Arguments:
             msg -- The received message stanza. See the documentation
                    for stanza objects and the Message stanza to see
                    how it may be used.
         """
-        if msg['type'] in ('chat', 'normal'):
-            msg.reply("Thanks for sending\n%(body)s" % msg).send()
+        if msg['mucnick'] != self.nick and self.nick in msg['body']:
+            # self.send_message(mto=msg['from'].bare,
+            #                   mbody="I heard that, %s." % msg['mucnick'],
+            #                   mtype='groupchat')
+            pass
+
+    def muc_online(self, presence):
+        """
+        Process a presence stanza from a chat room. In this case,
+        presences from users that have just come online are
+        handled by sending a welcome message that includes
+        the user's nickname and role in the room.
+
+        Arguments:
+            presence -- The received presence stanza. See the
+                        documentation for the Presence stanza
+                        to see how else it may be used.
+        """
+        if presence['muc']['nick'] != self.nick:
+            # self.send_message(mto=presence['from'].bare,
+            #                   mbody="Hello, %s %s" % (presence['muc']['role'],
+            #                                           presence['muc']['nick']),
+            #                   mtype='groupchat')
+            pass
 
 
 if __name__ == '__main__':
@@ -101,6 +152,10 @@ if __name__ == '__main__':
                     help="JID to use")
     optp.add_option("-p", "--password", dest="password",
                     help="password to use")
+    optp.add_option("-r", "--room", dest="room",
+                    help="MUC room to join")
+    optp.add_option("-n", "--nick", dest="nick",
+                    help="MUC nickname")
 
     opts, args = optp.parse_args()
 
@@ -112,22 +167,18 @@ if __name__ == '__main__':
         opts.jid = raw_input("Username: ")
     if opts.password is None:
         opts.password = getpass.getpass("Password: ")
+    if opts.room is None:
+        opts.room = raw_input("MUC room: ")
+    if opts.nick is None:
+        opts.nick = raw_input("MUC nickname: ")
 
-    # Setup the EchoBot and register plugins. Note that while plugins may
+    # Setup the MUCBot and register plugins. Note that while plugins may
     # have interdependencies, the order in which you register them does
     # not matter.
-    xmpp = EchoBot(opts.jid, opts.password)
+    xmpp = MUCBot(opts.jid, opts.password, opts.room, opts.nick)
     xmpp.register_plugin('xep_0030') # Service Discovery
-    xmpp.register_plugin('xep_0004') # Data Forms
-    xmpp.register_plugin('xep_0060') # PubSub
+    xmpp.register_plugin('xep_0045') # Multi-User Chat
     xmpp.register_plugin('xep_0199') # XMPP Ping
-
-    # If you are working with an OpenFire server, you may need
-    # to adjust the SSL version used:
-    # xmpp.ssl_version = ssl.PROTOCOL_SSLv3
-
-    # If you want to verify the SSL certificates offered by a server:
-    # xmpp.ca_certs = "path/to/ca/cert"
 
     # Connect to the XMPP server and start processing XMPP stanzas.
     if xmpp.connect():
