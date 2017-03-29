@@ -41,6 +41,7 @@ class MUCBot(sleekxmpp.ClientXMPP):
 
         self.room = room
         self.nick = nick
+        self.nick_to_jid = {}
 
         # The session_start event will be triggered when
         # the bot establishes its connection with the server
@@ -106,11 +107,10 @@ class MUCBot(sleekxmpp.ClientXMPP):
                    for stanza objects and the Message stanza to see
                    how it may be used.
         """
-        if msg['mucnick'] != self.nick and self.nick in msg['body']:
-            # self.send_message(mto=msg['from'].bare,
-            #                   mbody="I heard that, %s." % msg['mucnick'],
-            #                   mtype='groupchat')
-            pass
+        message_nick = msg['mucnick']
+        message_body = msg['body']
+        message_jid = self.nick_to_jid[message_nick]
+        logging.info('%s: %s' % (message_jid, message_body))
 
     def muc_presence(self, presence):
         """
@@ -125,9 +125,9 @@ class MUCBot(sleekxmpp.ClientXMPP):
                         to see how else it may be used.
         """
         presence_nick = presence['muc']['nick']
-        if presence_nick != self.nick:
-            logging.info('Nick: %-32s JID: %s' % (presence_nick, presence['muc']['jid']))
-            pass
+        presence_jid = presence['muc']['jid']
+        logging.debug('Nick: %-32s JID: %s' % (presence_nick, presence_jid))
+        self.nick_to_jid[presence_nick] = presence_jid
 
 
 if __name__ == '__main__':
@@ -159,7 +159,7 @@ if __name__ == '__main__':
 
     # Setup logging.
     logging.basicConfig(level=opts.loglevel,
-                        format='%(levelname)-8s %(message)s')
+                        format='%(asctime)-15s %(levelname)-8s %(message)s')
 
     if opts.jid is None:
         opts.jid = raw_input("Username: ")
