@@ -9,8 +9,8 @@
     See the file LICENSE for copying permission.
 """
 
-import logging
 import getpass
+import logging
 from optparse import OptionParser
 import ssl
 import sys
@@ -60,9 +60,8 @@ class MUCBot(sleekxmpp.ClientXMPP):
         # any presences you send yourself. To limit event handling
         # to a single room, use the events muc::room@server::presence,
         # muc::room@server::got_online, or muc::room@server::got_offline.
-        self.add_event_handler("muc::%s::got_online" % self.room,
-                               self.muc_online)
-
+        self.add_event_handler("muc::%s::presence" % self.room,
+                               self.muc_presence)
 
     def start(self, event):
         """
@@ -113,7 +112,7 @@ class MUCBot(sleekxmpp.ClientXMPP):
             #                   mtype='groupchat')
             pass
 
-    def muc_online(self, presence):
+    def muc_presence(self, presence):
         """
         Process a presence stanza from a chat room. In this case,
         presences from users that have just come online are
@@ -125,11 +124,9 @@ class MUCBot(sleekxmpp.ClientXMPP):
                         documentation for the Presence stanza
                         to see how else it may be used.
         """
-        if presence['muc']['nick'] != self.nick:
-            # self.send_message(mto=presence['from'].bare,
-            #                   mbody="Hello, %s %s" % (presence['muc']['role'],
-            #                                           presence['muc']['nick']),
-            #                   mtype='groupchat')
+        presence_nick = presence['muc']['nick']
+        if presence_nick != self.nick:
+            logging.info('Nick: %-32s JID: %s' % (presence_nick, presence['muc']['jid']))
             pass
 
 
