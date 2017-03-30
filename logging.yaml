@@ -1,0 +1,32 @@
+version: 1
+formatters:
+  default:
+    format: '%(asctime)s %(name)-16s %(levelname)-8s %(message)s'
+  xmppMessages:
+    format: '%(asctime)s %(message)s'
+handlers:
+  default:
+    class: logging.handlers.TimedRotatingFileHandler
+    level: DEBUG
+    formatter: default
+    when: D
+    backupCount: 7
+    filename: xmppbot.log
+  xmppMessages:
+    class: logging.handlers.TimedRotatingFileHandler
+    level: INFO
+    formatter: xmppMessages
+    when: D
+    backupCount: 30
+    filename: xmppmessages.log
+loggers:
+  default:
+    level: INFO
+    handlers: [default]
+  xmpMessages:
+    level: INFO
+    handlers: [xmppMessages]
+    propagate: no
+root:
+  level: INFO
+  handlers: [default]

@@ -7,11 +7,14 @@
 
 import getpass
 import logging
+import logging.config
 from optparse import OptionParser
 import ssl
 import sys
+import yaml
 
 import sleekxmpp
+
 
 # Python versions before 3.0 do not use UTF-8 encoding
 # by default. To ensure that Unicode is handled properly
@@ -127,6 +130,10 @@ class MUCBot(sleekxmpp.ClientXMPP):
 
 
 if __name__ == '__main__':
+    with open("logging.yaml", 'r') as logging_config_stream:
+        logging_config_dict = yaml.load(logging_config_stream)
+        logging.config.dictConfig(logging_config_dict)
+
     # Setup the command line arguments.
     optp = OptionParser()
 
@@ -152,10 +159,6 @@ if __name__ == '__main__':
                     help="MUC nickname")
 
     opts, args = optp.parse_args()
-
-    # Setup logging.
-    logging.basicConfig(level=opts.loglevel,
-                        format='%(asctime)-15s %(levelname)-8s %(message)s')
 
     if opts.jid is None:
         opts.jid = raw_input("Username: ")
