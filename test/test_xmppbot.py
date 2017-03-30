@@ -18,8 +18,13 @@
 
 import unittest
 
+from xmppbot import MucBot
+
 
 class TestMucBot(unittest.TestCase):
 
     def test_muc_message(self):
-        pass
+        muc_bot = MucBot()
+        test_message = {'mucnick': 'testnick', 'body': 'testbody'}
+
+        muc_bot.muc_message(test_message)
