@@ -28,7 +28,7 @@ import yaml
 import sleekxmpp
 
 
-class MUCBot(sleekxmpp.ClientXMPP):
+class MucBot(sleekxmpp.ClientXMPP):
 
     """
     A simple SleekXMPP bot that will greets those
@@ -176,7 +176,7 @@ if __name__ == '__main__':
     # Setup the MUCBot and register plugins. Note that while plugins may
     # have interdependencies, the order in which you register them does
     # not matter.
-    xmpp = MUCBot(opts.jid, opts.password, opts.room, opts.nick)
+    xmpp = MucBot(opts.jid, opts.password, opts.room, opts.nick)
     xmpp.register_plugin('xep_0030')  # Service Discovery
     xmpp.register_plugin('xep_0045')  # Multi-User Chat
     xmpp.register_plugin('xep_0199')  # XMPP Ping
