@@ -18,7 +18,7 @@ Python 3.2 or later and Python virtualenv.
 1. Create a virtualenv:
     
         virtualenv xmppbot
-        . xmppbot/bin/activate
+        . ./xmppbot/bin/activate
     
 2. Install required Python libraries:
  
@@ -29,7 +29,7 @@ Python 3.2 or later and Python virtualenv.
 
 1. Activate virtualenv:
 
-        . xmppbot/bin/activate
+        . ./xmppbot/bin/activate
         
 2. Run xmppbot:
 
