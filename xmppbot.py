@@ -10,21 +10,9 @@ import logging
 import logging.config
 from optparse import OptionParser
 import ssl
-import sys
 import yaml
 
 import sleekxmpp
-
-
-# Python versions before 3.0 do not use UTF-8 encoding
-# by default. To ensure that Unicode is handled properly
-# throughout SleekXMPP, we will set the default encoding
-# ourselves to UTF-8.
-if sys.version_info < (3, 0):
-    from sleekxmpp.util.misc_ops import setdefaultencoding
-    setdefaultencoding('utf8')
-else:
-    raw_input = input
 
 
 class MUCBot(sleekxmpp.ClientXMPP):
@@ -37,6 +25,8 @@ class MUCBot(sleekxmpp.ClientXMPP):
 
     def __init__(self, jid, password, room, nick):
         sleekxmpp.ClientXMPP.__init__(self, jid, password)
+
+        self.message_logger = logging.getLogger('xmppMessages')
 
         self.room = room
         self.nick = nick
@@ -109,7 +99,8 @@ class MUCBot(sleekxmpp.ClientXMPP):
         message_nick = msg['mucnick']
         message_body = msg['body']
         message_jid = self.nick_to_jid[message_nick]
-        logging.info('%s> %s' % (message_jid, message_body))
+
+        self.message_logger.info('%s> %s' % (message_jid, message_body))
 
     def muc_presence(self, presence):
         """
@@ -161,21 +152,21 @@ if __name__ == '__main__':
     opts, args = optp.parse_args()
 
     if opts.jid is None:
-        opts.jid = raw_input("Username: ")
+        opts.jid = input("Username: ")
     if opts.password is None:
         opts.password = getpass.getpass("Password: ")
     if opts.room is None:
-        opts.room = raw_input("MUC room: ")
+        opts.room = input("MUC room: ")
     if opts.nick is None:
-        opts.nick = raw_input("MUC nickname: ")
+        opts.nick = input("MUC nickname: ")
 
     # Setup the MUCBot and register plugins. Note that while plugins may
     # have interdependencies, the order in which you register them does
     # not matter.
     xmpp = MUCBot(opts.jid, opts.password, opts.room, opts.nick)
-    xmpp.register_plugin('xep_0030') # Service Discovery
-    xmpp.register_plugin('xep_0045') # Multi-User Chat
-    xmpp.register_plugin('xep_0199') # XMPP Ping
+    xmpp.register_plugin('xep_0030')  # Service Discovery
+    xmpp.register_plugin('xep_0045')  # Multi-User Chat
+    xmpp.register_plugin('xep_0199')  # XMPP Ping
 
     xmpp.ssl_version = ssl.PROTOCOL_TLSv1_2
 
