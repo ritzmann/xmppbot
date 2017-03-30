@@ -20,10 +20,7 @@ handlers:
     backupCount: 30
     filename: xmppmessages.log
 loggers:
-  default:
-    level: INFO
-    handlers: [default]
-  xmpMessages:
+  xmppMessages:
     level: INFO
     handlers: [xmppMessages]
     propagate: no

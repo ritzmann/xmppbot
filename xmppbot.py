@@ -113,7 +113,7 @@ class MucBot(sleekxmpp.ClientXMPP):
         message_body = msg['body']
         message_jid = self.nick_to_jid[message_nick]
 
-        self.message_logger.info('%s> %s' % (message_jid, message_body))
+        self.message_logger.info('<%s> %s' % (message_jid, message_body))
 
     def muc_presence(self, presence):
         """
