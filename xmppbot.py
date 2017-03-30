@@ -2,11 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-    SleekXMPP: The Sleek XMPP Library
-    Copyright (C) 2010  Nathanael C. Fritz
-    This file is part of SleekXMPP.
-
-    See the file LICENSE for copying permission.
+    Based on sample code from SleekXMPP. Copyright (C) 2010  Nathanael C. Fritz. See LICENSE-SleekXMPP for the license.
 """
 
 import getpass
@@ -110,7 +106,7 @@ class MUCBot(sleekxmpp.ClientXMPP):
         message_nick = msg['mucnick']
         message_body = msg['body']
         message_jid = self.nick_to_jid[message_nick]
-        logging.info('%s: %s' % (message_jid, message_body))
+        logging.info('%s> %s' % (message_jid, message_body))
 
     def muc_presence(self, presence):
         """
