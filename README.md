@@ -64,3 +64,7 @@ https://docs.python.org/3/library/logging.config.html for detailed instructions.
 
 * The bot maps each nickname to a JID and stores it in a hashtable. That hashtable could grow very big over time. 
   It should be replaced by a cache that would expire each entry that hasn't been updated in a couple of weeks.
+  
+* Implement unit testing.
+
+* Bot happily connects and never complains when you misspell the MUC address.
