@@ -28,16 +28,16 @@ import yaml
 import sleekxmpp
 
 
-class MucBot(sleekxmpp.ClientXMPP):
+class MucBot:
 
     """
-    A simple SleekXMPP bot that will greets those
-    who enter the room, and acknowledge any messages
-    that mentions the bot's nickname.
+    A simple SleekXMPP bot that will log all messages
+    sent to a room together with the full JID of the
+    sender.
     """
 
-    def __init__(self, jid, password, room, nick):
-        sleekxmpp.ClientXMPP.__init__(self, jid, password)
+    def __init__(self, xmppClient, room, nick):
+        self.xmppClient = xmppClient
 
         self.message_logger = logging.getLogger('xmppMessages')
 
@@ -50,23 +50,47 @@ class MucBot(sleekxmpp.ClientXMPP):
         # and the XML streams are ready for use. We want to
         # listen for this event so that we we can initialize
         # our roster.
-        self.add_event_handler("session_start", self.start)
+        self.xmppClient.add_event_handler("session_start", self.start_session)
 
         # The groupchat_message event is triggered whenever a message
         # stanza is received from any chat room. If you also also
         # register a handler for the 'message' event, MUC messages
         # will be processed by both handlers.
-        self.add_event_handler("groupchat_message", self.muc_message)
+        self.xmppClient.add_event_handler("groupchat_message", self.muc_message)
 
         # The groupchat_presence event is triggered whenever a
         # presence stanza is received from any chat room, including
         # any presences you send yourself. To limit event handling
         # to a single room, use the events muc::room@server::presence,
         # muc::room@server::got_online, or muc::room@server::got_offline.
-        self.add_event_handler("muc::%s::presence" % self.room,
-                               self.muc_presence)
+        self.xmppClient.add_event_handler("muc::%s::presence" % self.room,
+                                          self.muc_presence)
 
-    def start(self, event):
+        self.xmppClient.register_plugin('xep_0030')  # Service Discovery
+        self.xmppClient.register_plugin('xep_0045')  # Multi-User Chat
+        self.xmppClient.register_plugin('xep_0199')  # XMPP Ping
+
+        self.xmppClient.ssl_version = ssl.PROTOCOL_TLSv1_2
+
+    def connect(self, use_tls=True, use_ssl=False):
+        """
+        Connect to the XMPP server and start
+        processing XMPP stanzas.
+        """
+        if self.xmppClient.connect(use_tls=use_tls, use_ssl=use_ssl):
+            # If you do not have the dnspython library installed, you will need
+            # to manually specify the name of the server if it does not match
+            # the one in the JID. For example, to use Google Talk you would
+            # need to use:
+            #
+            # if xmpp.connect(('talk.google.com', 5222)):
+            #     ...
+            self.xmppClient.process(block=True)
+            logging.info("Done")
+        else:
+            logging.error("Unable to connect.")
+    
+    def start_session(self, event):
         """
         Process the session_start event.
 
@@ -79,13 +103,13 @@ class MucBot(sleekxmpp.ClientXMPP):
                      event does not provide any additional
                      data.
         """
-        self.get_roster()
-        self.send_presence()
-        self.plugin['xep_0045'].joinMUC(self.room,
-                                        self.nick,
-                                        # If a room password is needed, use:
-                                        # password=the_room_password,
-                                        wait=True)
+        self.xmppClient.get_roster()
+        self.xmppClient.send_presence()
+        self.xmppClient.plugin['xep_0045'].joinMUC(self.room,
+                                                   self.nick,
+                                                   # If a room password is needed, use:
+                                                   # password=the_room_password,
+                                                   wait=True)
 
     def muc_message(self, msg):
         """
@@ -176,23 +200,6 @@ if __name__ == '__main__':
     # Setup the MUCBot and register plugins. Note that while plugins may
     # have interdependencies, the order in which you register them does
     # not matter.
-    xmpp = MucBot(opts.jid, opts.password, opts.room, opts.nick)
-    xmpp.register_plugin('xep_0030')  # Service Discovery
-    xmpp.register_plugin('xep_0045')  # Multi-User Chat
-    xmpp.register_plugin('xep_0199')  # XMPP Ping
+    xmpp_bot = MucBot(sleekxmpp.ClientXMPP(opts.jid, opts.password), opts.room, opts.nick)
 
-    xmpp.ssl_version = ssl.PROTOCOL_TLSv1_2
-
-    # Connect to the XMPP server and start processing XMPP stanzas.
-    if xmpp.connect(use_tls=True, use_ssl=False):
-        # If you do not have the dnspython library installed, you will need
-        # to manually specify the name of the server if it does not match
-        # the one in the JID. For example, to use Google Talk you would
-        # need to use:
-        #
-        # if xmpp.connect(('talk.google.com', 5222)):
-        #     ...
-        xmpp.process(block=True)
-        print("Done")
-    else:
-        print("Unable to connect.")
+    xmpp_bot.connect()
