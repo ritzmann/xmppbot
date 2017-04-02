@@ -197,7 +197,7 @@ if __name__ == '__main__':
     if opts.nick is None:
         opts.nick = input("MUC nickname: ")
 
-    # Setup the MUCBot and register plugins. Note that while plugins may
+    # Setup the MucBot and register plugins. Note that while plugins may
     # have interdependencies, the order in which you register them does
     # not matter.
     xmpp_bot = MucBot(sleekxmpp.ClientXMPP(opts.jid, opts.password), opts.room, opts.nick)

@@ -16,15 +16,26 @@
 # Copyright 2017 Fabian Ritzmann
 #
 
+import logging
+import sleekxmpp
+from testfixtures import LogCapture
 import unittest
 
 from xmppbot import MucBot
 
 
+class ClientXmppMock(sleekxmpp.ClientXMPP):
+    pass 
+
 class TestMucBot(unittest.TestCase):
 
     def test_muc_message(self):
-        muc_bot = MucBot()
-        test_message = {'mucnick': 'testnick', 'body': 'testbody'}
+        with LogCapture('xmppMessages') as logCapture:
+            muc_bot = MucBot(ClientXmppMock('testjid', 'testpassword'), 'testroom', 'testnick')
+            test_message = {'mucnick': 'testnick', 'body': 'testbody'}
+            presence = {'muc': {'nick': 'testnick', 'jid': 'testjid'}}
+            muc_bot.muc_presence(presence)
+    
+            muc_bot.muc_message(test_message)
 
-        muc_bot.muc_message(test_message)
+            logCapture.check(('xmppMessages', 'INFO', '<testjid> testbody'))

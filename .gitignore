@@ -1,4 +1,6 @@
+.cache
 .idea
 *.iml
 *.log
 .project
+__pycache__
