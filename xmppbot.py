@@ -18,10 +18,10 @@
 # Based on sample code from SleekXMPP. Copyright (C) 2010  Nathanael C. Fritz. See LICENSE-SleekXMPP for the license.
 #
 
+import argparse
 import getpass
 import logging
 import logging.config
-from optparse import OptionParser
 import ssl
 import yaml
 
@@ -36,7 +36,10 @@ class MucBot:
     sender.
     """
 
-    def __init__(self, xmppClient, room, nick):
+    def __init__(self, xmppClient, room, nick, ssl_version=None, use_ipv6=False):
+        logging.debug("jid=%s, room=%s, nick=%s, ssl_version=%s, use_ipv6=%s",
+                      xmppClient.jid, room, nick, ssl_version, use_ipv6)
+
         self.xmppClient = xmppClient
 
         self.message_logger = logging.getLogger('xmppMessages')
@@ -70,7 +73,9 @@ class MucBot:
         self.xmppClient.register_plugin('xep_0045')  # Multi-User Chat
         self.xmppClient.register_plugin('xep_0199')  # XMPP Ping
 
-        self.xmppClient.ssl_version = ssl.PROTOCOL_TLSv1_2
+        if ssl_version:
+            self.xmppClient.ssl_version = ssl_version
+        self.xmppClient.use_ipv6 = use_ipv6
 
     def connect(self, use_tls=True, use_ssl=False):
         """
@@ -89,7 +94,7 @@ class MucBot:
             logging.info("Done")
         else:
             logging.error("Unable to connect.")
-    
+
     def start_session(self, event):
         """
         Process the session_start event.
@@ -153,7 +158,7 @@ class MucBot:
         """
         presence_nick = presence['muc']['nick']
         presence_jid = presence['muc']['jid']
-        logging.debug('Nick: %-32s JID: %s' % (presence_nick, presence_jid))
+        logging.debug('Nick: %-32s JID: %s', presence_nick, presence_jid)
         self.nick_to_jid[presence_nick] = presence_jid
 
 
@@ -163,43 +168,42 @@ if __name__ == '__main__':
         logging.config.dictConfig(logging_config_dict)
 
     # Setup the command line arguments.
-    optp = OptionParser()
+    argument_parser = argparse.ArgumentParser()
 
     # Output verbosity options.
-    optp.add_option('-q', '--quiet', help='set logging to ERROR',
-                    action='store_const', dest='loglevel',
-                    const=logging.ERROR, default=logging.INFO)
-    optp.add_option('-d', '--debug', help='set logging to DEBUG',
-                    action='store_const', dest='loglevel',
-                    const=logging.DEBUG, default=logging.INFO)
-    optp.add_option('-v', '--verbose', help='set logging to COMM',
-                    action='store_const', dest='loglevel',
-                    const=5, default=logging.INFO)
+    argument_parser.add_argument('-q', '--quiet', help='set logging to ERROR',
+                                 action='store_const', dest='loglevel', const=logging.ERROR, default=logging.INFO)
+    argument_parser.add_argument('-d', '--debug', help='set logging to DEBUG',
+                                 action='store_const', dest='loglevel', const=logging.DEBUG, default=logging.INFO)
+    argument_parser.add_argument('-v', '--verbose', help='set logging to COMM',
+                                 action='store_const', dest='loglevel', const=5, default=logging.INFO)
 
     # JID and password options.
-    optp.add_option("-j", "--jid", dest="jid",
-                    help="JID to use")
-    optp.add_option("-p", "--password", dest="password",
-                    help="password to use")
-    optp.add_option("-r", "--room", dest="room",
-                    help="MUC room to join")
-    optp.add_option("-n", "--nick", dest="nick",
-                    help="MUC nickname")
+    argument_parser.add_argument("-j", "--jid", dest="jid", help="JID to use")
+    argument_parser.add_argument("-p", "--password", dest="password", help="password to use")
+    argument_parser.add_argument("-r", "--room", dest="room", help="MUC room to join")
+    argument_parser.add_argument("-n", "--nick", dest="nick", help="MUC nickname")
 
-    opts, args = optp.parse_args()
+    argument_parser.add_argument("-i", "--ipv6", help='enable IPv6',
+                                 action='store_true', dest='use_ipv6', default=False)
+    argument_parser.add_argument("-t", "--tls12", help='enable TLS 1.2',
+                                 action='store_const', dest='ssl_version', const=ssl.PROTOCOL_TLSv1_2, default=None)
 
-    if opts.jid is None:
-        opts.jid = input("Username: ")
-    if opts.password is None:
-        opts.password = getpass.getpass("Password: ")
-    if opts.room is None:
-        opts.room = input("MUC room: ")
-    if opts.nick is None:
-        opts.nick = input("MUC nickname: ")
+    arguments = argument_parser.parse_args()
+
+    if arguments.jid is None:
+        arguments.jid = input("Username: ")
+    if arguments.password is None:
+        arguments.password = getpass.getpass("Password: ")
+    if arguments.room is None:
+        arguments.room = input("MUC room: ")
+    if arguments.nick is None:
+        arguments.nick = input("MUC nickname: ")
 
     # Setup the MucBot and register plugins. Note that while plugins may
     # have interdependencies, the order in which you register them does
     # not matter.
-    xmpp_bot = MucBot(sleekxmpp.ClientXMPP(opts.jid, opts.password), opts.room, opts.nick)
+    xmpp_bot = MucBot(sleekxmpp.ClientXMPP(arguments.jid, arguments.password),
+                      arguments.room, arguments.nick, arguments.ssl_version, arguments.use_ipv6)
 
     xmpp_bot.connect()
